@@ -1,5 +1,4 @@
 from selenium.webdriver.common.by import By
-
 from .base_page import BasePage
 
 
@@ -14,8 +13,8 @@ class OrderPage(BasePage):
     PHONE_INPUT = (By.XPATH, "//input[@placeholder='* Телефон: на него позвонит курьер']")
     DATE_INPUT = (By.XPATH, "//input[@placeholder='* Когда привезти самокат']")
     RENTAL_PERIOD_INPUT = (By.XPATH, "//div[contains(@class, 'Dropdown-control')]")
-    COLOR_CHECKBOX_BLACK = (By.XPATH, "//label[contains(text(),'чёрный жемчуг')]")
-    COLOR_CHECKBOX_GRAY = (By.XPATH, "//label[contains(text(),'серая безысходность')]")
+    BLACK_CHECKBOX_LABEL = (By.XPATH, "//label[contains(@class, 'Checkbox_Label') and @for='black']")
+    GREY_CHECKBOX_LABEL = (By.XPATH, "//label[contains(@class, 'Checkbox_Label') and @for='grey']")
     COMMENT_INPUT = (By.XPATH, "//input[@placeholder='Комментарий для курьера']")
     
     # Заголовки страниц
@@ -47,17 +46,22 @@ class OrderPage(BasePage):
         self.click(self.METRO_INPUT)
         # Вводим название станции для поиска
         self.type(self.METRO_INPUT, station_name)
-            
-        # Ждем появления опций и кликаем на первую найденную
         self.wait_for_visible(self.METRO_OPTION, timeout=5)
         self.click(self.METRO_OPTION)
 
     def select_rental_period(self, rental_period):
-        """Select rental period from dropdown"""
         self.click(self.RENTAL_PERIOD_INPUT)
         rental_option = (self.RENTAL_OPTION[0], self.RENTAL_OPTION[1].format(rental_period))
         self.wait_for_visible(rental_option, timeout=5)
         self.click(rental_option)
+
+    def select_scooter_color(self, color):
+        color_mapping = {
+            "чёрный жемчуг": self.BLACK_CHECKBOX_LABEL,
+            "серая безысходность": self.GREY_CHECKBOX_LABEL
+        }
+        
+        self.click(color_mapping[color])
 
     def place_order(self, first_name, last_name, address, metro, phone, date, rental_period, color, comment):
         # Заполняем первую страницу формы
@@ -73,15 +77,41 @@ class OrderPage(BasePage):
         self.type(self.RENTAL_PERIOD_INPUT, rental_period)
         
         # Выбираем цвет самоката
-        if color == "чёрный жемчуг":
-            self.click(self.COLOR_CHECKBOX_BLACK)
-        elif color == "серая безысходность":
-            self.click(self.COLOR_CHECKBOX_GRAY)
+        self.select_scooter_color(color)
         
         self.type(self.COMMENT_INPUT, comment)
         
         # Подтверждаем заказ
         self.click(self.ORDER_BUTTON)
+        self.click(self.CONFIRM_BUTTON)
+
+    def fill_order_form(self, order_data):
+        self.type(self.FIRST_NAME_INPUT, order_data["first_name"])
+        self.type(self.LAST_NAME_INPUT, order_data["last_name"])
+        self.type(self.ADDRESS_INPUT, order_data["address"])
+        self.type(self.PHONE_INPUT, order_data["phone"])
+        self.select_metro_station(order_data["metro"])
+
+    def fill_second_page_form(self, order_data):
+        # Ждем появления поля даты
+        self.wait_for_visible(self.DATE_INPUT, timeout=20)
+        self.type(self.DATE_INPUT, order_data["date"])
+        
+        # Скрываем календарь, он мешает
+        self.execute_script("document.querySelector('.react-datepicker').style.display = 'none';")
+        
+        # Выбираем срок аренды из dropdown
+        self.select_rental_period(order_data['rental_period'])
+        
+        # Выбираем цвет самоката
+        self.select_scooter_color(order_data["color"])
+            
+        self.type(self.COMMENT_INPUT, order_data["comment"])
+
+    def confirm_order(self):
+        self.click(self.ORDER_BUTTON)
+        self.wait_for_visible(self.ORDER_MODAL_HEADER, timeout=15)
+        self.wait_for_visible(self.CONFIRM_BUTTON, timeout=15)
         self.click(self.CONFIRM_BUTTON)
 
     def success_banner_visible(self):

@@ -8,6 +8,7 @@ class BasePage:
     def __init__(self, driver, base_url=None):
         self.driver = driver
         self.base_url = base_url
+        self.driver.implicitly_wait(10)
 
     def open_root(self):
         self.driver.get(self.base_url)
@@ -49,7 +50,8 @@ class BasePage:
     def is_visible(self, locator, timeout=3):
         self.wait_for_visible(locator, timeout)
         return True
-              
+           
+           
     def is_element_present(self, locator, timeout=3):
         self.wait_for_presence(locator, timeout)
         return True
@@ -72,3 +74,6 @@ class BasePage:
     def wait_for_url_contains(self, url_part, timeout=10):
         wait = WebDriverWait(self.driver, timeout)
         wait.until(lambda driver: url_part in driver.current_url)
+
+    def get_current_url(self):
+        return self.driver.current_url
